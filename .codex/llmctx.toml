@@ -1,0 +1,3 @@
+context = "foxbook"
+repo = "foxbook-firefox"
+context_dir = "../foxbook/.context"

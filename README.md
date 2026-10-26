@@ -4,6 +4,8 @@ Surface などのタッチ操作中心の環境で、Firefox Split View の中�
 ドラッグできない場合に備える AutoConfig です。ナビゲーションバーに
 「分割 50:50」のスライダーを追加し、左ペインの幅をタッチで変更・保存します。
 
+現行実装の正本は[仕様書 v0.1](specification/foxbook-firefox仕様書v0.1.md)、未完了事項は[TODO](TODO.md)です。
+
 ## 内容
 
 | パス | 用途 |
