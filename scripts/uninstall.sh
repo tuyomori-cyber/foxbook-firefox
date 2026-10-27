@@ -7,8 +7,19 @@ die() {
 }
 
 find_firefox_dir() {
-  local candidate
-  for candidate in /usr/lib64/firefox /usr/lib/firefox /opt/firefox; do
+  local candidate sudo_home
+  local -a candidates=(/usr/lib64/firefox /usr/lib/firefox /opt/firefox)
+
+  # `sudo` changes HOME to root's home directory. Prefer the invoking user's
+  # dedicated Firefox when it is installed under ~/.local/opt.
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    sudo_home="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    [[ -n "${sudo_home}" ]] && candidates=(
+      "${sudo_home}/.local/opt/foxbook-firefox" "${candidates[@]}"
+    )
+  fi
+
+  for candidate in "${candidates[@]}"; do
     if [[ -f "${candidate}/application.ini" ]]; then
       printf '%s\n' "${candidate}"
       return 0
@@ -26,10 +37,15 @@ if [[ -z "${target_dir}" ]]; then
 fi
 [[ -f "${target_dir}/application.ini" ]] || die "not a Firefox installation: ${target_dir}"
 
-config_target="${target_dir}/foxbook-splitview.cfg"
-pref_target="${target_dir}/defaults/pref/foxbook-splitview-autoconfig.js"
+targets=(
+  "${target_dir}/foxbook-autoconfig.cfg"
+  "${target_dir}/foxbook-splitview.cfg"
+  "${target_dir}/foxbook-dev-temp-addon.cfg"
+  "${target_dir}/defaults/pref/foxbook-autoconfig.js"
+  "${target_dir}/defaults/pref/foxbook-splitview-autoconfig.js"
+)
 
-for target in "${config_target}" "${pref_target}"; do
+for target in "${targets[@]}"; do
   if [[ -e "${target}" ]]; then
     rm -- "${target}"
     printf 'removed: %s\n' "${target}"
