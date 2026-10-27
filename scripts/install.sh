@@ -7,6 +7,7 @@ readonly BOOTSTRAP_CONFIG_NAME="foxbook-autoconfig.cfg"
 readonly SPLITVIEW_CONFIG_NAME="foxbook-splitview.cfg"
 readonly PREF_NAME="foxbook-autoconfig.js"
 readonly LEGACY_PREF_NAME="foxbook-splitview-autoconfig.js"
+readonly LEGACY_DEV_CONFIG_NAME="foxbook-dev-temp-addon.cfg"
 
 die() {
   printf 'error: %s\n' "$*" >&2
@@ -51,7 +52,6 @@ case "${1:-}" in
 esac
 
 [[ "$(id -u)" -eq 0 ]] || die 'run as root (for example: sudo ./scripts/install.sh)'
-[[ -f "${PROJECT_DIR}/autoconfig/${BOOTSTRAP_CONFIG_NAME}" ]] || die "source missing: ${BOOTSTRAP_CONFIG_NAME}"
 [[ -f "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" ]] || die "source missing: ${SPLITVIEW_CONFIG_NAME}"
 [[ -f "${PROJECT_DIR}/autoconfig/defaults/pref/${PREF_NAME}" ]] || die "source missing: ${PREF_NAME}"
 
@@ -60,17 +60,21 @@ if [[ -z "${target_dir}" ]]; then
 fi
 [[ -f "${target_dir}/application.ini" ]] || die "not a Firefox installation: ${target_dir}"
 
+temporary_config="$(mktemp)"
+trap 'rm -f -- "${temporary_config}"' EXIT
+cp -- "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" "${temporary_config}"
+
 readonly -a source_files=(
-  "${PROJECT_DIR}/autoconfig/${BOOTSTRAP_CONFIG_NAME}"
-  "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}"
+  "${temporary_config}"
   "${PROJECT_DIR}/autoconfig/defaults/pref/${PREF_NAME}"
 )
 readonly -a target_files=(
   "${target_dir}/${BOOTSTRAP_CONFIG_NAME}"
-  "${target_dir}/${SPLITVIEW_CONFIG_NAME}"
   "${target_dir}/defaults/pref/${PREF_NAME}"
 )
 legacy_pref_target="${target_dir}/defaults/pref/${LEGACY_PREF_NAME}"
+legacy_splitview_target="${target_dir}/${SPLITVIEW_CONFIG_NAME}"
+legacy_dev_config_target="${target_dir}/${LEGACY_DEV_CONFIG_NAME}"
 
 if [[ "${mode}" == "check" ]]; then
   matches=true
@@ -110,6 +114,12 @@ if [[ -e "${legacy_pref_target}" ]]; then
   rm -- "${legacy_pref_target}"
   printf 'removed legacy config entry: %s\n' "${legacy_pref_target}"
 fi
+for legacy_target in "${legacy_splitview_target}" "${legacy_dev_config_target}"; do
+  if [[ -e "${legacy_target}" ]]; then
+    rm -- "${legacy_target}"
+    printf 'removed legacy config file: %s\n' "${legacy_target}"
+  fi
+done
 
 printf 'installed: %s\n' "${target_dir}"
 [[ -d "${backup_dir}" ]] && printf 'backup: %s\n' "${backup_dir}"

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+readonly BOOTSTRAP_CONFIG_NAME="foxbook-autoconfig.cfg"
+readonly SPLITVIEW_CONFIG_NAME="foxbook-splitview.cfg"
+readonly LEGACY_DEV_CONFIG_NAME="foxbook-dev-temp-addon.cfg"
+
 die() {
   printf 'error: %s\n' "$*" >&2
   exit 1
@@ -31,11 +37,20 @@ if [[ -z "${target_dir}" ]]; then
   target_dir="$(find_firefox_dir)" || die 'Firefox installation not found; pass FIREFOX_DIR explicitly'
 fi
 [[ -f "${target_dir}/application.ini" ]] || die "not a Firefox installation: ${target_dir}"
+[[ -f "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" ]] || \
+  die "source missing: ${SPLITVIEW_CONFIG_NAME}"
 
-config_target="${target_dir}/foxbook-dev-temp-addon.cfg"
+config_target="${target_dir}/${BOOTSTRAP_CONFIG_NAME}"
 if [[ -e "${config_target}" ]]; then
-  rm -- "${config_target}"
-  printf 'removed development loader: %s\n' "${config_target}"
+  install -D -o root -g root -m 0644 -- \
+    "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" "${config_target}"
+  printf 'restored normal AutoConfig: %s\n' "${config_target}"
 else
-  printf 'not present: %s\n' "${config_target}"
+  die "normal AutoConfig is not installed: ${config_target}"
+fi
+
+legacy_config_target="${target_dir}/${LEGACY_DEV_CONFIG_NAME}"
+if [[ -e "${legacy_config_target}" ]]; then
+  rm -- "${legacy_config_target}"
+  printf 'removed legacy development loader: %s\n' "${legacy_config_target}"
 fi

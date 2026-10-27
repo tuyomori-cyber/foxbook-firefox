@@ -4,6 +4,9 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 readonly DEV_CONFIG_NAME="foxbook-dev-temp-addon.cfg"
+readonly BOOTSTRAP_CONFIG_NAME="foxbook-autoconfig.cfg"
+readonly SPLITVIEW_CONFIG_NAME="foxbook-splitview.cfg"
+readonly PREF_NAME="foxbook-autoconfig.js"
 readonly REGISTRY_DIR="/etc/foxbook"
 readonly REGISTRY_PATH="${REGISTRY_DIR}/dev-addons.tsv"
 
@@ -52,6 +55,7 @@ PY
 addon_id="$1"
 [[ "${addon_id}" =~ ^[A-Za-z0-9._@{}-]+$ ]] || die 'ADDON_ID contains unsupported characters'
 [[ -f "${PROJECT_DIR}/autoconfig/${DEV_CONFIG_NAME}" ]] || die "source missing: ${DEV_CONFIG_NAME}"
+[[ -f "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" ]] || die "source missing: ${SPLITVIEW_CONFIG_NAME}"
 source_dir="$(realpath -e -- "$2")" || die "source directory does not exist: $2"
 [[ -d "${source_dir}" && ! -L "${source_dir}" ]] || die "not an extension source directory: ${source_dir}"
 [[ "${source_dir}" != *$'\t'* && "${source_dir}" != *$'\n'* ]] || die 'SOURCE_DIR cannot contain tabs or newlines'
@@ -64,28 +68,37 @@ if [[ -z "${target_dir}" ]]; then
   target_dir="$(find_firefox_dir)" || die 'Firefox installation not found; pass FIREFOX_DIR explicitly'
 fi
 [[ -f "${target_dir}/application.ini" ]] || die "not a Firefox installation: ${target_dir}"
-[[ -f "${target_dir}/foxbook-autoconfig.cfg" && \
-   -f "${target_dir}/defaults/pref/foxbook-autoconfig.js" ]] || \
+[[ -f "${target_dir}/${BOOTSTRAP_CONFIG_NAME}" && \
+   -f "${target_dir}/defaults/pref/${PREF_NAME}" ]] || \
   die 'install the normal Foxbook AutoConfig first: sudo ./scripts/install.sh'
 
 install -d -o root -g root -m 0755 -- "${REGISTRY_DIR}"
 temporary_registry="$(mktemp "${REGISTRY_PATH}.XXXXXX")"
-trap 'rm -f -- "${temporary_registry}"' EXIT
+temporary_config=""
+trap 'rm -f -- "${temporary_registry}" "${temporary_config}"' EXIT
 if [[ -f "${REGISTRY_PATH}" ]]; then
-  awk -F '\t' -v id="${addon_id}" '$1 != id { print }' -- "${REGISTRY_PATH}" > "${temporary_registry}"
+  # Some awk implementations treat `--` as an input filename instead of an
+  # option terminator. The registry is an absolute, validated path, so pass it
+  # directly for portable filtering.
+  awk -F '\t' -v id="${addon_id}" '$1 != id { print }' "${REGISTRY_PATH}" > "${temporary_registry}"
 fi
 printf '%s\t%s\n' "${addon_id}" "${source_dir}" >> "${temporary_registry}"
 install -o root -g root -m 0644 -- "${temporary_registry}" "${REGISTRY_PATH}"
 
-config_target="${target_dir}/${DEV_CONFIG_NAME}"
+temporary_config="$(mktemp)"
+cp -- "${PROJECT_DIR}/autoconfig/${SPLITVIEW_CONFIG_NAME}" "${temporary_config}"
+printf '\n' >> "${temporary_config}"
+cat -- "${PROJECT_DIR}/autoconfig/${DEV_CONFIG_NAME}" >> "${temporary_config}"
+
+config_target="${target_dir}/${BOOTSTRAP_CONFIG_NAME}"
 backup_dir="${target_dir}/foxbook-dev-addon-backup-$(date +%Y%m%d-%H%M%S)"
-if [[ -e "${config_target}" ]] && ! cmp -s "${PROJECT_DIR}/autoconfig/${DEV_CONFIG_NAME}" "${config_target}"; then
+if [[ -e "${config_target}" ]] && ! cmp -s "${temporary_config}" "${config_target}"; then
   mkdir -p -- "${backup_dir}"
-  cp -a -- "${config_target}" "${backup_dir}/${DEV_CONFIG_NAME}"
+  cp -a -- "${config_target}" "${backup_dir}/${BOOTSTRAP_CONFIG_NAME}"
 fi
 install -D -o root -g root -m 0644 -- \
-  "${PROJECT_DIR}/autoconfig/${DEV_CONFIG_NAME}" "${config_target}"
+  "${temporary_config}" "${config_target}"
 printf 'registered development extension: %s\n' "${addon_id}"
 printf 'source directory: %s\n' "${source_dir}"
-printf 'installed development loader: %s\n' "${target_dir}"
+printf 'installed combined development configuration: %s\n' "${config_target}"
 [[ -d "${backup_dir}" ]] && printf 'backup: %s\n' "${backup_dir}"

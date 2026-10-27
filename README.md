@@ -10,9 +10,8 @@ Surface などのタッチ操作中心の環境で、Firefox Split View の中�
 
 | パス | 用途 |
 | --- | --- |
-| `autoconfig/defaults/pref/foxbook-autoconfig.js` | 常用AutoConfigブートストラップを読み込ませる設定 |
-| `autoconfig/foxbook-autoconfig.cfg` | Split Viewと任意導入の開発用機能を分離して読み込むブートストラップ |
-| `autoconfig/foxbook-splitview.cfg` | Split View 比率スライダーの実装 |
+| `autoconfig/defaults/pref/foxbook-autoconfig.js` | 導入済みの主AutoConfigを読み込ませる設定 |
+| `autoconfig/foxbook-splitview.cfg` | Split View 比率スライダーの実装。導入時に主AutoConfigへ配置・合成する |
 | `scripts/install.sh` | ファイルの検証・バックアップ・導入 |
 | `scripts/uninstall.sh` | 導入した常用・開発用AutoConfigの削除（明示実行時のみ） |
 | `scripts/install-dev-addon.sh` | 署名なし開発用拡張を明示登録し、開発用読込器を導入 |
@@ -45,7 +44,6 @@ sudo ./scripts/install.sh /path/to/firefox
 ```text
 <Firefox のインストール先>/defaults/pref/foxbook-autoconfig.js
 <Firefox のインストール先>/foxbook-autoconfig.cfg
-<Firefox のインストール先>/foxbook-splitview.cfg
 ```
 
 AutoConfig は Firefox 本体の権限で実行されます。このリポジトリを信頼できる状態で
@@ -54,7 +52,9 @@ AutoConfig は Firefox 本体の権限で実行されます。このリポジト
 ## 開発用の署名なし拡張
 
 この節の機能は常用のSplit View機能とは独立した、Surface実機での開発・検査専用です。
-通常の `install.sh` は拡張を読み込みません。
+通常の `install.sh` は拡張を読み込みません。開発用拡張を登録した場合だけ、
+Split View実装と開発用読込器を一つの主AutoConfigへ導入時に合成します。
+Firefoxの実行時外部スクリプト読込は使用しません。
 
 拡張を展開済みの開発元ディレクトリとして用意し、Firefoxを終了して明示導入します。
 この前に一度、常用の `install.sh` を導入済みである必要があります。拡張ソースはコピーせず、
@@ -94,7 +94,9 @@ sudo ./scripts/install-dev-addon.sh ui-checker@example.com ~/project/ui-checker
 ソースを保存した後、Firefoxツールバーの「開発拡張を再読み込み」を押します。登録済みの
 一時拡張だけが、同じ開発元ディレクトリから再読込されます。background scriptと
 `manifest.json` の変更が反映されます。すでに開いているタブのcontent scriptを反映するには、
-必要に応じてそのタブも再読み込みしてください。
+必要に応じてそのタブも再読み込みしてください。拡張自身が開いたページは再読込時に閉じられるため、
+再読込後に拡張のツールバーアイコンから開き直します。狭い画面ではこのボタンは「≫」の
+オーバーフローメニュー内に表示されます。
 
 Firefox本体を自動検出できない場合だけ、Firefoxの `application.ini` があるディレクトリを
 最後の引数として追加します。
@@ -106,7 +108,8 @@ sudo ./scripts/install-dev-addon.sh \
   /path/to/firefox
 ```
 
-開発用読込だけを止める場合は次を実行します。開発元と登録表は残ります。
+開発用読込だけを止める場合は次を実行します。開発元と登録表は残り、主AutoConfigは
+Split Viewだけの通常構成へ復元されます。
 
 ```bash
 sudo ./scripts/uninstall-dev-addon.sh
@@ -139,6 +142,10 @@ Firefox を再起動します。結果は `about:config` の
 
 Firefox 本体の更新後は Split View の内部 API が変わる可能性があるため、まずこの
 自己診断と実際のタッチ操作を確認してください。
+
+Surface Fedora（Firefox 157.0.1）では、Split Viewスライダーの表示・比率反映と、
+登録済み開発用拡張の自動一時読込を2026-10-27に確認しました。実行時の外部AutoConfig
+読込は起動エラーになるため、現在の導入スクリプトは単一の主AutoConfigを静的に合成します。
 
 ## 更新・削除
 
