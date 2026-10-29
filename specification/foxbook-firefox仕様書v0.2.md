@@ -33,9 +33,12 @@ Firefox AutoConfigは設定できる主ファイルが一つだけである。�
 ```bash
 sudo ./scripts/install-dev-addon.sh ADDON_ID SOURCE_DIR [FIREFOX_DIR]
 sudo ./scripts/uninstall-dev-addon.sh [FIREFOX_DIR]
+./scripts/list-dev-addons.sh
 ```
 
 導入スクリプトは、開発元の `SOURCE_DIR` が展開済みWebExtensionであり、`manifest.json` のGecko IDが引数の `ADDON_ID` と一致することを検査する。合格したIDと解決済み絶対パスの組をroot所有の登録表 `/etc/foxbook/dev-addons.tsv` へ登録し、Split Viewと開発用読込器を合成した主AutoConfigをFirefox本体へ導入する。拡張ソース自体はコピーしない。
+
+`list-dev-addons.sh` は登録表を変更せず、有効な登録を `ADDON_ID<TAB>SOURCE_DIR` 形式で列挙する。登録表がない、または有効な行がない場合は、標準エラーへの通知だけで成功終了する。root所有でない、通常ユーザーから書込み可能、またはシンボリックリンクの登録表は拒否する。重複IDはAutoConfig読込器と同様に後の行を採用する。
 
 Firefox起動後、開発用AutoConfigは登録表の各IDについて、対応する開発元ディレクトリだけを `AddonManager.installTemporaryAddon()` で読み込む。一時拡張は署名不要で、そのFirefoxプロセスの終了時に自動削除される。最初のタブ読み込みより前に有効化されることは保証しない。開発用AutoConfigはツールバーへ「開発拡張を再読み込み」ボタンを追加し、クリック時に登録済みの一時拡張だけを `addon.reload()` する。
 
@@ -64,3 +67,4 @@ Firefox起動後、開発用AutoConfigは登録表の各IDについて、対応�
 5. `uninstall-dev-addon.sh` 後、Split Viewを維持したまま一時拡張が読まれないこと。
 6. Firefox更新後に、Split View自己診断と一時拡張読込・Reloadを実機で再確認すること。
 7. Reload後に、再読込前に開いていた拡張ページを自動で開き直す方式を検討すること。
+8. `list-dev-addons.sh` が未登録時、複数登録時、重複ID時、不安全な登録表を期待どおりに扱うこと。
