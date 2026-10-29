@@ -107,6 +107,14 @@ sudo ./scripts/install-dev-addon.sh ui-checker@example.com ~/project/ui-checker
 再読込後に拡張のツールバーアイコンから開き直します。狭い画面ではこのボタンは「≫」の
 オーバーフローメニュー内に表示されます。
 
+開発用読込器を更新した場合は、Firefoxを終了し、登録済みの拡張を一つ指定して
+`install-dev-addon.sh` を再実行してください。登録表の他の拡張はそのまま残り、更新された
+読込器が主AutoConfigへ合成されます。たとえばFirefox本体が `/usr/lib64/firefox` の場合：
+
+```bash
+sudo ./scripts/install-dev-addon.sh foxbook-control@foxbook.example ~/project/foxbook-control/extension /usr/lib64/firefox
+```
+
 Firefox本体を自動検出できない場合だけ、Firefoxの `application.ini` があるディレクトリを
 最後の引数として追加します。
 
