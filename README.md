@@ -5,6 +5,7 @@ Surface などのタッチ操作中心の環境で、Firefox Split View の中�
 「分割 50:50」のスライダーを追加し、左ペインの幅をタッチで変更・保存します。
 
 現行実装の正本は[仕様書 v0.2](specification/foxbook-firefox仕様書v0.2.md)、未完了事項は[TODO](TODO.md)です。
+Split Viewの片側で既存タブを切り替える[検討案](specification/Split%20Viewタブ切替仕様案.md)は見送り・クローズ済みで、未実装です。
 
 ## 内容
 
